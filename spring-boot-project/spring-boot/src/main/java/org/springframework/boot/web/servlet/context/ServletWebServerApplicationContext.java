@@ -153,10 +153,15 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 		}
 	}
 
+	/**
+	 * 由 AbstractApplicationContext的refresh方法发起调用
+	 */
 	@Override
 	protected void onRefresh() {
+		// 执行父类的 onrefresh 方法
 		super.onRefresh();
 		try {
+			// 创建 Web 服务
 			createWebServer();
 		}
 		catch (Throwable ex) {
@@ -177,8 +182,10 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 		ServletContext servletContext = getServletContext();
 		if (webServer == null && servletContext == null) {
 			StartupStep createWebServer = this.getApplicationStartup().start("spring.boot.webserver.create");
+			// 获取WebServer的工厂
 			ServletWebServerFactory factory = getWebServerFactory();
 			createWebServer.tag("factory", factory.getClass().toString());
+			// 获取WebServer
 			this.webServer = factory.getWebServer(getSelfInitializer());
 			createWebServer.end();
 			getBeanFactory().registerSingleton("webServerGracefulShutdown",

@@ -260,11 +260,15 @@ public class SpringApplication {
 		this.resourceLoader = resourceLoader;
 		Assert.notNull(primarySources, "PrimarySources must not be null");
 		this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
+		// 确定容器类型，NONE、SERVLET、REACTIVE
 		this.webApplicationType = WebApplicationType.deduceFromClasspath();
 		this.bootstrapRegistryInitializers = new ArrayList<>(
 				getSpringFactoriesInstances(BootstrapRegistryInitializer.class));
+		// 加载所有初始化器
 		setInitializers((Collection) getSpringFactoriesInstances(ApplicationContextInitializer.class));
+		// 加载所有监听器
 		setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
+		// 设置程序运行主类
 		this.mainApplicationClass = deduceMainApplicationClass();
 	}
 
@@ -293,24 +297,37 @@ public class SpringApplication {
 		long startTime = System.nanoTime();
 		DefaultBootstrapContext bootstrapContext = createBootstrapContext();
 		ConfigurableApplicationContext context = null;
+		// 将java.awt.headless设置为true
 		configureHeadlessProperty();
+		// 获取并启用监听器
 		SpringApplicationRunListeners listeners = getRunListeners(args);
 		listeners.starting(bootstrapContext, this.mainApplicationClass);
 		try {
+			// 设置应用程序参数
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+			// 准备环境变量，包含系统属性和用户配置的属性，执行的代码块在  prepareEnvironment 方法内
 			ConfigurableEnvironment environment = prepareEnvironment(listeners, bootstrapContext, applicationArguments);
+			// 忽略bean信息 这个方法configureIgnoreBeanInfo() 这个方法是将 spring.beaninfo.ignore 的默认值值设为true，意思是跳过beanInfo的搜索
 			configureIgnoreBeanInfo(environment);
+			// 打印 banner 信息
 			Banner printedBanner = printBanner(environment);
+			// 创建应用程序的上下文
 			context = createApplicationContext();
 			context.setApplicationStartup(this.applicationStartup);
+			// 准备上下文环境
 			prepareContext(bootstrapContext, context, environment, listeners, applicationArguments, printedBanner);
+			// 刷新上下文,刷新上下文已经是spring的范畴了，自动装配和启动 tomcat就是在这个方法里面完成的
 			refreshContext(context);
+			// 刷新上下文后置处理, afterRefresh 方法是启动后的一些处理，留给用户扩展使用
 			afterRefresh(context, applicationArguments);
 			Duration timeTakenToStartup = Duration.ofNanos(System.nanoTime() - startTime);
+			// 打印启动信息以及启动时间
 			if (this.logStartupInfo) {
 				new StartupInfoLogger(this.mainApplicationClass).logStarted(getApplicationLog(), timeTakenToStartup);
 			}
+			// 发布上下文准备就绪事件
 			listeners.started(context, timeTakenToStartup);
+			// 执行自定义的run方法
 			callRunners(context, applicationArguments);
 		}
 		catch (Throwable ex) {
@@ -381,7 +398,9 @@ public class SpringApplication {
 			ConfigurableEnvironment environment, SpringApplicationRunListeners listeners,
 			ApplicationArguments applicationArguments, Banner printedBanner) {
 		context.setEnvironment(environment);
+		// 实例化单例的beanName生成器
 		postProcessApplicationContext(context);
+		// 执行初始化方法
 		applyInitializers(context);
 		listeners.contextPrepared(context);
 		bootstrapContext.close(context);
@@ -391,6 +410,7 @@ public class SpringApplication {
 		}
 		// Add boot specific singleton beans
 		ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
+		// 将启动参数注册到容器中
 		beanFactory.registerSingleton("springApplicationArguments", applicationArguments);
 		if (printedBanner != null) {
 			beanFactory.registerSingleton("springBootBanner", printedBanner);
